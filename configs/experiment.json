@@ -1,0 +1,52 @@
+{
+  "seed": 20260723,
+  "dataset_id": "Fancy-MLLM/R1-Onevision-Bench",
+  "dataset_split": "train",
+  "models": {
+    "base": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "sft": "Fancy-MLLM/R1-Onevision-7B",
+    "rl": "Fancy-MLLM/R1-Onevision-7B-RL"
+  },
+  "generation": {
+    "max_new_tokens_reproduce": 4096,
+    "max_new_tokens_other": 2048,
+    "temperature": 0.1,
+    "top_p": 0.001,
+    "top_k": 1,
+    "repetition_penalty": 1.05
+  },
+  "phases": {
+    "reproduce": {
+      "subset_size": null,
+      "models": ["base", "sft", "rl"],
+      "conditions": ["clean"],
+      "prompt_modes": ["paper"],
+      "image_modes": ["global"]
+    },
+    "robustness": {
+      "subset_size": 300,
+      "models": ["base", "sft", "rl"],
+      "conditions": [
+        "clean",
+        "downsample_50",
+        "downsample_25",
+        "distractor_1",
+        "distractor_3"
+      ],
+      "prompt_modes": ["paper"],
+      "image_modes": ["global"]
+    },
+    "improvement": {
+      "subset_size": 300,
+      "models": ["rl"],
+      "conditions": [
+        "clean",
+        "downsample_25",
+        "distractor_3"
+      ],
+      "prompt_modes": ["paper", "evidence_first"],
+      "image_modes": ["global", "global_plus_quadrants"]
+    }
+  }
+}
+
