@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "r1-onevision-robustness-study"
+version = "0.1.0"
+description = "Reproducibility and controlled robustness analysis for R1-Onevision"
+requires-python = ">=3.10"
+dependencies = [
+  "accelerate>=1.2",
+  "datasets>=3.2",
+  "matplotlib>=3.8",
+  "numpy>=1.26",
+  "pandas>=2.1",
+  "Pillow>=10.2",
+  "qwen-vl-utils>=0.0.8",
+  "safetensors>=0.4",
+  "scikit-learn>=1.4",
+  "seaborn>=0.13",
+  "torch>=2.4",
+  "tqdm>=4.66",
+  "transformers==4.49.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

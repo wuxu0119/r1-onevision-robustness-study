@@ -1,0 +1,5 @@
+-e .
+
+# flash-attn is optional. The scripts default to PyTorch SDPA because it is
+# easier to install. Single-view inference fits an A100 40GB; some five-view
+# inputs exceed 40GB and are recorded as CUDA errors for auditability.
