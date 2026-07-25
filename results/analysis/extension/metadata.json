@@ -1,0 +1,5 @@
+{
+  "seed": 20260724,
+  "bootstrap_repeats": 10000,
+  "analysis_scope": "post-hoc extension with a clean held-out complement"
+}

@@ -3,9 +3,11 @@ from __future__ import annotations
 import hashlib
 import math
 import random
+import re
 from pathlib import Path
 from typing import Any, Callable
 
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from .data import decode_image
@@ -53,16 +55,35 @@ def compose_distractor_panels(
     *,
     seed: int,
     panel_size: int = 512,
+    target_position: int | None = None,
 ) -> tuple[Image.Image, int]:
     images = [target.convert("RGB"), *[image.convert("RGB") for image in distractors]]
     rng = random.Random(seed)
-    positions = list(range(len(images)))
-    rng.shuffle(positions)
-
-    shuffled = [None] * len(images)
-    target_position = positions[0]
-    for source_index, destination_index in enumerate(positions):
-        shuffled[destination_index] = images[source_index]
+    if target_position is None:
+        positions = list(range(len(images)))
+        rng.shuffle(positions)
+        shuffled = [None] * len(images)
+        resolved_target_position = positions[0]
+        for source_index, destination_index in enumerate(positions):
+            shuffled[destination_index] = images[source_index]
+    else:
+        if not 0 <= target_position < len(images):
+            raise ValueError(
+                f"target_position must be in [0, {len(images)}), "
+                f"got {target_position}"
+            )
+        resolved_target_position = target_position
+        shuffled = [None] * len(images)
+        shuffled[target_position] = images[0]
+        remaining_positions = [
+            index for index in range(len(images)) if index != target_position
+        ]
+        shuffled_distractors = images[1:]
+        rng.shuffle(shuffled_distractors)
+        for destination_index, image in zip(
+            remaining_positions, shuffled_distractors
+        ):
+            shuffled[destination_index] = image
 
     columns = 2 if len(images) > 1 else 1
     rows = math.ceil(len(images) / columns)
@@ -73,7 +94,42 @@ def compose_distractor_panels(
         x = (index % columns) * panel_size
         y = (index // columns) * panel_size
         canvas.paste(panel, (x, y))
-    return canvas, target_position
+    return canvas, resolved_target_position
+
+
+def make_control_panel(
+    mode: str,
+    *,
+    seed: int,
+    size: tuple[int, int] = (512, 512),
+) -> Image.Image:
+    """Create a deterministic non-semantic panel for confound controls."""
+    if mode == "blank":
+        return Image.new("RGB", size, "white")
+    if mode == "noise":
+        rng = np.random.default_rng(seed % (2**32))
+        values = rng.integers(
+            0,
+            256,
+            size=(size[1], size[0], 3),
+            dtype=np.uint8,
+        )
+        return Image.fromarray(values, mode="RGB")
+    raise ValueError(f"Unknown control panel mode: {mode}")
+
+
+def fit_on_budget_canvas(image: Image.Image, side: int) -> Image.Image:
+    """Resize and pad one view to a fixed square visual-pixel budget."""
+    canvas = Image.new("RGB", (side, side), "white")
+    fitted = ImageOps.contain(
+        image.convert("RGB"),
+        (side, side),
+        Image.Resampling.LANCZOS,
+    )
+    x = (side - fitted.width) // 2
+    y = (side - fitted.height) // 2
+    canvas.paste(fitted, (x, y))
+    return canvas
 
 
 def quadrant_crops(image: Image.Image, overlap: float = 0.12) -> list[Image.Image]:
@@ -123,22 +179,105 @@ def prepare_condition_images(
     elif condition == "downsample_25":
         _save_if_missing(global_path, lambda: downsample_and_restore(target, 0.25))
         condition_meta["ratio"] = 0.25
-    elif condition.startswith("distractor_"):
-        count = int(condition.rsplit("_", 1)[1])
-        rng = random.Random(_stable_seed(seed, row_id, condition))
-        candidates = [index for index in range(len(dataset)) if index != row_id]
-        distractor_ids = rng.sample(candidates, count)
+    elif match := re.fullmatch(
+        r"distractor_(\d+)(?:_seed(\d+))?(?:_(left|right))?",
+        condition,
+    ):
+        count = int(match.group(1))
+        seed_variant = int(match.group(2) or 0)
+        fixed_position_name = match.group(3)
+        fixed_target_position = (
+            None
+            if fixed_position_name is None
+            else 0
+            if fixed_position_name == "left"
+            else 1
+        )
+        base_condition = f"distractor_{count}"
+        available = [index for index in range(len(dataset)) if index != row_id]
+        distractor_ids: list[int] = []
+        # Select variants sequentially without replacement across seeds. The
+        # variant-0 choice is unchanged from the original implementation.
+        for variant in range(seed_variant + 1):
+            content_seed_key = (
+                base_condition
+                if variant == 0
+                else f"{base_condition}_seed{variant}"
+            )
+            rng = random.Random(_stable_seed(seed, row_id, content_seed_key))
+            distractor_ids = rng.sample(available, count)
+            chosen = set(distractor_ids)
+            available = [index for index in available if index not in chosen]
         distractors = [decode_image(dataset[index]["image"]) for index in distractor_ids]
         composite, target_position = compose_distractor_panels(
             target,
             distractors,
-            seed=_stable_seed(seed, row_id, condition, "position"),
+            # Alternate semantic distractor seeds keep target placement fixed,
+            # so the only intended change is distractor identity/content.
+            seed=_stable_seed(seed, row_id, base_condition, "position"),
+            target_position=fixed_target_position,
         )
         _save_if_missing(global_path, lambda: composite)
         condition_meta.update(
             {
                 "distractor_ids": distractor_ids,
+                "distractor_categories": [
+                    str(dataset[index].get("category", ""))
+                    for index in distractor_ids
+                ],
+                "distractor_seed_variant": seed_variant,
+                "fixed_target_position": fixed_position_name or "",
                 "target_panel_index": target_position,
+            }
+        )
+    elif control_match := re.fullmatch(
+        r"control_(blank|noise)_1(?:_(left|right))?",
+        condition,
+    ):
+        control_mode = control_match.group(1)
+        fixed_position_name = control_match.group(2)
+        fixed_target_position = (
+            None
+            if fixed_position_name is None
+            else 0
+            if fixed_position_name == "left"
+            else 1
+        )
+        control = make_control_panel(
+            control_mode,
+            seed=_stable_seed(
+                seed,
+                row_id,
+                f"control_{control_mode}_1",
+                "content",
+            ),
+        )
+        # Reuse the distractor-1 position seed. Target scale, canvas geometry,
+        # labels, and target-panel placement are therefore matched row by row.
+        composite, target_position = compose_distractor_panels(
+            target,
+            [control],
+            seed=_stable_seed(seed, row_id, "distractor_1", "position"),
+            target_position=fixed_target_position,
+        )
+        _save_if_missing(global_path, lambda: composite)
+        condition_meta.update(
+            {
+                "control_panel": control_mode,
+                "fixed_target_position": fixed_position_name or "",
+                "target_panel_index": target_position,
+                "matched_condition": "distractor_1",
+            }
+        )
+    elif condition == "control_target_rescaled":
+        panel = _fit_on_panel(target, 512)
+        _draw_panel_label(panel, "Panel A")
+        _save_if_missing(global_path, lambda: panel)
+        condition_meta.update(
+            {
+                "control_panel": "target_only_rescaled",
+                "target_panel_index": 0,
+                "matched_panel_size": 512,
             }
         )
     else:
@@ -146,14 +285,41 @@ def prepare_condition_images(
 
     if image_mode == "global":
         return [global_path], condition_meta
+    global_image = Image.open(global_path).convert("RGB")
+    if image_mode == "global_budgeted":
+        budgeted_path = sample_dir / "global_budgeted_864.png"
+        _save_if_missing(
+            budgeted_path,
+            lambda: fit_on_budget_canvas(global_image, 864),
+        )
+        condition_meta = {
+            **condition_meta,
+            "view_budget": "1x864x864",
+            "nominal_pixel_budget": 864 * 864,
+        }
+        return [budgeted_path], condition_meta
+    if image_mode == "global_plus_quadrants_budgeted":
+        views = [global_image, *quadrant_crops(global_image)]
+        paths: list[Path] = []
+        for index, view in enumerate(views):
+            path = sample_dir / f"budgeted_view_{index}_384.png"
+            _save_if_missing(
+                path,
+                lambda view=view: fit_on_budget_canvas(view, 384),
+            )
+            paths.append(path)
+        condition_meta = {
+            **condition_meta,
+            "view_budget": "5x384x384",
+            "nominal_pixel_budget": 5 * 384 * 384,
+        }
+        return paths, condition_meta
     if image_mode != "global_plus_quadrants":
         raise ValueError(f"Unknown image mode: {image_mode}")
 
-    global_image = Image.open(global_path).convert("RGB")
     crop_paths: list[Path] = []
     for index, crop in enumerate(quadrant_crops(global_image)):
         crop_path = sample_dir / f"quadrant_{index}.png"
         _save_if_missing(crop_path, lambda crop=crop: crop)
         crop_paths.append(crop_path)
     return [global_path, *crop_paths], condition_meta
-

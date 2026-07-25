@@ -1,7 +1,0 @@
-phase,model_key,condition,prompt_mode,image_mode,error_type,n
-improvement,rl,clean,evidence_first,global_plus_quadrants,OutOfMemoryError,20
-improvement,rl,clean,paper,global_plus_quadrants,OutOfMemoryError,20
-improvement,rl,distractor_3,evidence_first,global_plus_quadrants,OutOfMemoryError,300
-improvement,rl,distractor_3,paper,global_plus_quadrants,OutOfMemoryError,300
-improvement,rl,downsample_25,evidence_first,global_plus_quadrants,OutOfMemoryError,20
-improvement,rl,downsample_25,paper,global_plus_quadrants,OutOfMemoryError,20

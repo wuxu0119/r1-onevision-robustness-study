@@ -1,0 +1,6 @@
+domain,n,base_accuracy_pct,sft_accuracy_pct,rl_accuracy_pct,rl_minus_base_pp,rl_minus_base_ci_low_pp,rl_minus_base_ci_high_pp
+Biology,134,50.00,45.52,47.01,-2.99,-11.94,5.22
+Chemistry,105,48.57,33.33,47.62,-0.95,-11.43,9.52
+Deduction,98,29.59,23.47,23.47,-6.12,-16.33,4.08
+Mathematics,327,33.03,32.42,36.70,3.67,-2.45,9.79
+Physics,278,33.45,34.17,34.17,0.72,-5.76,7.19

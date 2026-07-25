@@ -5,7 +5,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import precision_recall_fscore_support
 
 from r1eval.scoring import normalize_text
 
@@ -18,6 +17,34 @@ GROUP_COLUMNS = [
     "prompt_mode",
     "image_mode",
 ]
+
+
+def binary_precision_recall_f1(
+    actual: pd.Series,
+    predicted: pd.Series,
+) -> tuple[float, float, float]:
+    """Compute binary precision/recall/F1 without an optional sklearn dependency."""
+    actual_values = actual.astype(bool).to_numpy()
+    predicted_values = predicted.astype(bool).to_numpy()
+    true_positive = int(np.sum(actual_values & predicted_values))
+    false_positive = int(np.sum(~actual_values & predicted_values))
+    false_negative = int(np.sum(actual_values & ~predicted_values))
+    precision = (
+        true_positive / (true_positive + false_positive)
+        if true_positive + false_positive
+        else 0.0
+    )
+    recall = (
+        true_positive / (true_positive + false_negative)
+        if true_positive + false_negative
+        else 0.0
+    )
+    f1 = (
+        2.0 * precision * recall / (precision + recall)
+        if precision + recall
+        else 0.0
+    )
+    return precision, recall, f1
 
 
 def parse_args() -> argparse.Namespace:
@@ -134,11 +161,9 @@ def build_failure_detector(frame: pd.DataFrame) -> pd.DataFrame:
         improved_answer = group["improved_answer"].map(normalize_text)
         disagreement = baseline_answer != improved_answer
         actual_failure = ~group["baseline_correct"].astype(bool)
-        precision, recall, f1, _ = precision_recall_fscore_support(
+        precision, recall, f1 = binary_precision_recall_f1(
             actual_failure,
             disagreement,
-            average="binary",
-            zero_division=0,
         )
         agreement = ~disagreement
         selective_accuracy = (

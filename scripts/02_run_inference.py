@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import itertools
 import traceback
 from pathlib import Path
@@ -20,7 +21,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--phase",
         required=True,
-        choices=["reproduce", "robustness", "improvement"],
+        choices=[
+            "reproduce",
+            "robustness",
+            "improvement",
+            "controls",
+            "confidence",
+            "heldout_gate",
+            "gate_generalization",
+            "multiview_budgeted",
+        ],
     )
     parser.add_argument("--model-key", required=True)
     parser.add_argument("--shard-id", type=int, default=0)
@@ -37,7 +47,71 @@ def completion_key(record: dict) -> tuple:
         record["condition"],
         record["prompt_mode"],
         record["image_mode"],
+        int(record.get("replicate", 0)),
     )
+
+
+def replicate_ids(phase: dict) -> list[int]:
+    configured = phase.get("replicates", 1)
+    if isinstance(configured, int):
+        if configured < 1:
+            raise ValueError("replicates must be at least 1")
+        return list(range(configured))
+    values = [int(value) for value in configured]
+    if not values or len(set(values)) != len(values) or min(values) < 0:
+        raise ValueError("replicates must be a non-empty set of non-negative integers")
+    return values
+
+
+def resolve_generation(config: dict, phase_name: str, phase: dict) -> dict:
+    defaults = config["generation"]
+    max_tokens_key = (
+        "max_new_tokens_reproduce"
+        if phase_name == "reproduce"
+        else "max_new_tokens_other"
+    )
+    generation = {
+        "max_new_tokens": int(defaults[max_tokens_key]),
+        "temperature": float(defaults["temperature"]),
+        "top_p": float(defaults["top_p"]),
+        "top_k": int(defaults["top_k"]),
+        "repetition_penalty": float(defaults["repetition_penalty"]),
+    }
+    overrides = phase.get("generation", {})
+    for key in generation:
+        if key in overrides:
+            conversion = int if key in {"max_new_tokens", "top_k"} else float
+            generation[key] = conversion(overrides[key])
+    return generation
+
+
+def deterministic_generation_seed(
+    *,
+    base_seed: int,
+    row_id: int,
+    phase: str,
+    model_key: str,
+    condition: str,
+    prompt_mode: str,
+    image_mode: str,
+    replicate: int,
+) -> int:
+    identity = "\x1f".join(
+        [
+            str(base_seed),
+            str(row_id),
+            phase,
+            model_key,
+            condition,
+            prompt_mode,
+            image_mode,
+            str(replicate),
+        ]
+    )
+    digest = hashlib.sha256(identity.encode("utf-8")).digest()
+    # torch.manual_seed accepts signed 64-bit values. Staying below 2**63 also
+    # keeps the recorded seed portable across CUDA and CPU installations.
+    return int.from_bytes(digest[:8], "big") % (2**63 - 1)
 
 
 def main() -> None:
@@ -92,37 +166,35 @@ def main() -> None:
         attention=args.attention,
         seed=int(config["seed"]) + args.shard_id,
     )
-    max_tokens_key = (
-        "max_new_tokens_reproduce"
-        if args.phase == "reproduce"
-        else "max_new_tokens_other"
-    )
-    generation = {
-        "max_new_tokens": int(config["generation"][max_tokens_key]),
-        "temperature": float(config["generation"]["temperature"]),
-        "top_p": float(config["generation"]["top_p"]),
-        "top_k": int(config["generation"]["top_k"]),
-        "repetition_penalty": float(
-            config["generation"]["repetition_penalty"]
-        ),
-    }
+    generation = resolve_generation(config, args.phase, phase)
 
     combinations = list(
         itertools.product(
             phase["conditions"],
             phase["prompt_modes"],
             phase["image_modes"],
+            replicate_ids(phase),
         )
     )
     total = len(manifest) * len(combinations)
     progress = tqdm(total=total, desc=f"{args.phase}/{args.model_key}/shard{args.shard_id}")
     for sample in manifest:
         row_id = int(sample["row_id"])
-        for condition, prompt_mode, image_mode in combinations:
-            key = (row_id, condition, prompt_mode, image_mode)
+        for condition, prompt_mode, image_mode, replicate in combinations:
+            key = (row_id, condition, prompt_mode, image_mode, replicate)
             if key in completed:
                 progress.update(1)
                 continue
+            generation_seed = deterministic_generation_seed(
+                base_seed=int(config["seed"]),
+                row_id=row_id,
+                phase=args.phase,
+                model_key=args.model_key,
+                condition=condition,
+                prompt_mode=prompt_mode,
+                image_mode=image_mode,
+                replicate=replicate,
+            )
             base_record = {
                 **sample,
                 "phase": args.phase,
@@ -131,9 +203,11 @@ def main() -> None:
                 "condition": condition,
                 "prompt_mode": prompt_mode,
                 "image_mode": image_mode,
+                "replicate": replicate,
                 "shard_id": args.shard_id,
                 "num_shards": args.num_shards,
                 "generation": generation,
+                "generation_seed": generation_seed,
             }
             try:
                 image_paths, condition_meta = prepare_condition_images(
@@ -154,6 +228,7 @@ def main() -> None:
                     image_paths=image_paths,
                     prompt=prompt,
                     generation=generation,
+                    seed=generation_seed,
                 )
                 record = {
                     **base_record,
@@ -179,4 +254,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

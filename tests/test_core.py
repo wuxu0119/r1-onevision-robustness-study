@@ -35,7 +35,6 @@ class ScoringTests(unittest.TestCase):
         result = score_output("<answer>A</answer>", "C")
         self.assertFalse(result.is_correct)
 
-
 class ModelingTests(unittest.TestCase):
     def test_sft_uses_compatible_base_processor(self) -> None:
         self.assertEqual(

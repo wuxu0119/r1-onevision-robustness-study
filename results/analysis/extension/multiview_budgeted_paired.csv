@@ -1,0 +1,7 @@
+model,left_condition,right_condition,n,left_accuracy_pct,right_accuracy_pct,delta_pp,ci_low_pp,ci_high_pp,left_only_correct,right_only_correct,mcnemar_exact_p,answer_agreement_pct,condition,prompt_mode
+rl,global_budgeted,global_plus_quadrants_budgeted,300,35.333333333333336,34.66666666666667,-0.6666666666666667,-6.666666666666667,5.333333333333334,46,44,0.9161288770112893,37.333333333333336,clean,paper
+rl,global_budgeted,global_plus_quadrants_budgeted,300,36.0,33.33333333333333,-2.666666666666667,-8.666666666666668,3.3333333333333335,46,38,0.4452046690465762,37.333333333333336,clean,evidence_first
+rl,global_budgeted,global_plus_quadrants_budgeted,300,35.333333333333336,35.0,-0.33333333333333337,-6.0,5.333333333333334,38,37,1.0,41.333333333333336,downsample_25,paper
+rl,global_budgeted,global_plus_quadrants_budgeted,300,32.0,33.0,1.0,-5.0,6.666666666666667,38,41,0.8221442424521855,40.0,downsample_25,evidence_first
+rl,global_budgeted,global_plus_quadrants_budgeted,300,33.0,32.33333333333333,-0.6666666666666667,-6.666666666666667,5.333333333333334,45,43,0.9151865048428769,40.0,distractor_3,paper
+rl,global_budgeted,global_plus_quadrants_budgeted,300,31.666666666666664,31.666666666666664,0.0,-6.0,6.0,41,41,1.0,41.66666666666667,distractor_3,evidence_first

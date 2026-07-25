@@ -1,12 +1,18 @@
-# Preregistered experiment protocol
+# Recorded experiment protocol
+
+This file documents the original study plan and the later extension. It was
+not registered with an external time-stamped service, so the final report does
+not describe the analyses as preregistered. Confirmatory and exploratory
+claims are separated explicitly below.
 
 ## Hypotheses
 
 H1. Accuracy decreases monotonically as visual resolution is reduced, with
 errors concentrated in perception and formalization rather than arithmetic.
 
-H2. Adding unrelated panels harms performance because the model selects and
-formalizes irrelevant evidence.
+H2. Adding unrelated panels may harm performance. Because panel composition
+also changes target scale, canvas geometry, and position, the original
+distractor comparison alone cannot identify the causal mechanism.
 
 H3. SFT and RL improve clean reasoning accuracy more than they improve
 robustness to corrupted visual evidence.
@@ -61,8 +67,8 @@ Evidence-first prompting asks the model to:
 5. output a final answer in a machine-readable tag.
 
 Global-plus-quadrants supplies the full image and four overlapping local views.
-Agreement between the direct and evidence-first answers acts as a failure
-detector.
+Agreement between the direct and evidence-first answers is evaluated as an
+exploratory abstention heuristic, not as a validated failure detector.
 
 ## Primary metrics
 
@@ -70,13 +76,14 @@ detector.
 - parse rate;
 - accuracy drop relative to clean input;
 - clean-to-perturbed answer consistency;
-- failure-detection precision, recall, and F1;
+- accepted-set accuracy, rejected-set error rate, and coverage;
 - selective accuracy among samples where methods agree;
 - generation latency and output-token count.
 
 ## Manual error audit
 
-After inference, manually classify at least 50 baseline failures:
+If a systematic taxonomy is reported, manually classify at least 100
+fixed-seed, condition-stratified failures:
 
 - P: perception/transcription error;
 - F: relation or formalization error;
@@ -85,10 +92,38 @@ After inference, manually classify at least 50 baseline failures:
 - U: uncertain or mixed.
 
 The annotation is performed while viewing the input image, question,
-ground-truth answer, generated evidence, and generated reasoning.
+ground-truth answer, generated evidence, and generated reasoning. Category
+frequencies must not be reported until the table is filled and annotation
+agreement has been measured.
 
 ## Statistical reporting
 
-Report paired differences on the same samples. Use 2,000 paired bootstrap
-resamples for 95% confidence intervals. Avoid claiming improvement when the
-interval includes zero.
+Report paired differences on the same samples. Final reported intervals use
+10,000 paired bootstrap resamples. Apply a Holm correction across the 12
+pre-defined model-by-perturbation tests. Avoid claiming improvement when the
+interval includes zero or when a nominal p-value does not survive the stated
+multiple-comparison procedure.
+
+## Post-hoc extension
+
+The extension was designed after auditing the original results and is therefore
+exploratory.
+
+- A fixed-canvas factorial design separates target-only resizing, blank/noise
+  panels, target position (left/right), and three non-overlapping semantic
+  distractor seeds. The design is run for Base, SFT, and RL.
+- Eight stochastic runs of the RL checkpoint are generated for clean,
+  distractor-3, and downsample-25 inputs. The first two runs form a
+  cost-matched same-prompt agreement baseline; all eight runs define discrete
+  majority-confidence operating points for risk-coverage analysis.
+- Evidence-first prompting is run for all five visual conditions and all three
+  checkpoints.
+- A clean evidence-first run covers all 942 questions. The prompt is evaluated
+  separately on the 642-row complement that was not used during development,
+  providing held-out clean validation.
+- The OOM-prone five-view experiment is repeated with one 864x864 global view
+  versus five 384x384 views. Their nominal pixel budgets are 746,496 and
+  737,280 respectively. This is a practical visual-token proxy rather than a
+  guarantee of identical internal token counts.
+- Except for the 642-row clean complement, extension analyses use the original
+  300-item subset and remain exploratory.

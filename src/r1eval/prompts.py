@@ -43,11 +43,13 @@ def build_prompt(
         raise ValueError(f"Unknown prompt mode: {prompt_mode}")
 
     view_note = ""
-    if image_mode == "global_plus_quadrants":
+    if image_mode in {
+        "global_plus_quadrants",
+        "global_plus_quadrants_budgeted",
+    }:
         view_note = (
             "\nThe first image is the global view. The following images are "
             "overlapping local views of the same visual input. Use them to "
             "check small text, symbols, and the relevant panel."
         )
     return f"{instruction}{view_note}\n\n{task}"
-

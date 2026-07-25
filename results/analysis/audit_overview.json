@@ -3,7 +3,7 @@
   "groups": 30,
   "duplicate_keys": 0,
   "errors": 680,
-  "manual_review": 1312,
+  "manual_review": 1219,
   "phase_rows": {
     "improvement": 3600,
     "reproduce": 2826,

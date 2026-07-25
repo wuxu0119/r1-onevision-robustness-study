@@ -10,6 +10,7 @@ env/
 
 data/cache/
 data/derived/
+data/test_derived/
 data/manifests/
 logs/
 .cache/
@@ -21,6 +22,8 @@ results/review/
 
 *.tar.gz
 *.zip
+*.pdf
+*.docx
 model_download*.log
 
 .env

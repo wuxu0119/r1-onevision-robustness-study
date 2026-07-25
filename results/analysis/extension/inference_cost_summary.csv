@@ -1,0 +1,6 @@
+method,outputs_per_item,sum_recorded_latency_seconds,mean_output_tokens,coverage_pct,selective_accuracy_pct
+Paper unconditional,1,15.52,555.9,100.00,33.00
+Dual prompt,2,31.81,1143.5,44.00,46.97
+Same prompt x2,2,24.84,889.4,42.33,47.24
+Eight-run vote threshold 0.625,8,99.37,3557.7,44.67,55.22
+Eight-run vote threshold 0.75,8,99.37,3557.7,29.67,62.92

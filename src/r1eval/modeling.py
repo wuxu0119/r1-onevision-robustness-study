@@ -4,11 +4,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-import torch
-from qwen_vl_utils import process_vision_info
-from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
-
-
 PROCESSOR_OVERRIDES = {
     # The SFT repository was saved with the development-only class name
     # "Qwen2_5_VLImageProcessor". Transformers 4.49 expects
@@ -31,6 +26,14 @@ class R1ModelRunner:
         attention: str = "sdpa",
         seed: int = 0,
     ) -> None:
+        # Keep heavyweight GPU/runtime dependencies lazy so scoring, data
+        # preparation, and unit tests remain importable on CPU-only systems.
+        import torch
+        from qwen_vl_utils import process_vision_info
+        from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
+
+        self._torch = torch
+        self._process_vision_info = process_vision_info
         self.model_id = model_id
         self.processor_id = processor_id_for_model(model_id)
         self.device = device
@@ -55,6 +58,7 @@ class R1ModelRunner:
         image_paths: list[str | Path],
         prompt: str,
         generation: dict[str, Any],
+        seed: int | None = None,
     ) -> dict[str, Any]:
         image_content = [
             {"type": "image", "image": str(Path(path).resolve())}
@@ -72,7 +76,7 @@ class R1ModelRunner:
             add_generation_prompt=True,
             add_vision_id=True,
         )
-        image_inputs, video_inputs = process_vision_info(messages)
+        image_inputs, video_inputs = self._process_vision_info(messages)
         inputs = self.processor(
             text=[text],
             images=image_inputs,
@@ -81,13 +85,14 @@ class R1ModelRunner:
             return_tensors="pt",
         ).to(self.device)
 
-        torch.manual_seed(self.seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(self.seed)
-            torch.cuda.reset_peak_memory_stats()
+        active_seed = self.seed if seed is None else int(seed)
+        self._torch.manual_seed(active_seed)
+        if self._torch.cuda.is_available():
+            self._torch.cuda.manual_seed_all(active_seed)
+            self._torch.cuda.reset_peak_memory_stats()
 
         started = time.perf_counter()
-        with torch.inference_mode():
+        with self._torch.inference_mode():
             generated_ids = self.model.generate(
                 **inputs,
                 max_new_tokens=int(generation["max_new_tokens"]),
@@ -108,8 +113,8 @@ class R1ModelRunner:
             clean_up_tokenization_spaces=False,
         )[0]
         peak_gb = (
-            torch.cuda.max_memory_allocated() / (1024**3)
-            if torch.cuda.is_available()
+            self._torch.cuda.max_memory_allocated() / (1024**3)
+            if self._torch.cuda.is_available()
             else 0.0
         )
         return {
@@ -120,4 +125,5 @@ class R1ModelRunner:
             "peak_memory_gb": peak_gb,
             "model_revision": self.revision,
             "processor_id": self.processor_id,
+            "generation_seed": active_seed,
         }

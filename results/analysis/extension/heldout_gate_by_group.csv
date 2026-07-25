@@ -1,0 +1,8 @@
+group,n,baseline_accuracy_pct,accepted_n,coverage_pct,coverage_ci_low_pct,coverage_ci_high_pct,selective_accuracy_pct,selective_accuracy_ci_low_pct,selective_accuracy_ci_high_pct
+Multiple choice,534,40.8,282,52.8,48.5,56.9,48.6,42.8,54.4
+Free response,108,31.5,6,5.6,1.9,10.2,33.3,0.0,75.0
+Physics,189,38.6,90,47.6,40.7,55.0,46.7,36.2,57.0
+Chemistry,72,48.6,41,56.9,44.4,68.1,39.0,24.4,54.4
+Mathematics,223,39.9,74,33.2,27.4,39.5,55.4,43.8,66.7
+Biology,91,39.6,55,60.4,50.6,70.3,56.4,43.1,69.6
+Deduction,67,28.4,28,41.8,29.9,53.7,32.1,14.8,50.0

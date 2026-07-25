@@ -1,0 +1,87 @@
+{
+  "seed": 20260723,
+  "dataset_id": "Fancy-MLLM/R1-Onevision-Bench",
+  "dataset_split": "train",
+  "models": {
+    "base": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "sft": "Fancy-MLLM/R1-Onevision-7B",
+    "rl": "Fancy-MLLM/R1-Onevision-7B-RL"
+  },
+  "generation": {
+    "max_new_tokens_reproduce": 4096,
+    "max_new_tokens_other": 2048,
+    "temperature": 0.1,
+    "top_p": 0.001,
+    "top_k": 1,
+    "repetition_penalty": 1.05
+  },
+  "phases": {
+    "controls": {
+      "subset_size": 300,
+      "models": ["base", "sft", "rl"],
+      "conditions": [
+        "control_target_rescaled",
+        "control_blank_1_left",
+        "control_blank_1_right",
+        "control_noise_1_left",
+        "control_noise_1_right",
+        "distractor_1_seed0_left",
+        "distractor_1_seed0_right",
+        "distractor_1_seed1_left",
+        "distractor_1_seed1_right",
+        "distractor_1_seed2_left",
+        "distractor_1_seed2_right"
+      ],
+      "prompt_modes": ["paper"],
+      "image_modes": ["global"]
+    },
+    "confidence": {
+      "subset_size": 300,
+      "models": ["rl"],
+      "conditions": ["clean", "distractor_3", "downsample_25"],
+      "prompt_modes": ["paper"],
+      "image_modes": ["global"],
+      "replicates": 8,
+      "generation": {
+        "max_new_tokens": 2048,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "top_k": 50,
+        "repetition_penalty": 1.05
+      }
+    },
+    "heldout_gate": {
+      "subset_size": null,
+      "models": ["rl"],
+      "conditions": ["clean"],
+      "prompt_modes": ["evidence_first"],
+      "image_modes": ["global"],
+      "generation": {
+        "max_new_tokens": 4096
+      }
+    },
+    "gate_generalization": {
+      "subset_size": 300,
+      "models": ["base", "sft", "rl"],
+      "conditions": [
+        "clean",
+        "downsample_50",
+        "downsample_25",
+        "distractor_1",
+        "distractor_3"
+      ],
+      "prompt_modes": ["evidence_first"],
+      "image_modes": ["global"]
+    },
+    "multiview_budgeted": {
+      "subset_size": 300,
+      "models": ["rl"],
+      "conditions": ["clean", "downsample_25", "distractor_3"],
+      "prompt_modes": ["paper", "evidence_first"],
+      "image_modes": [
+        "global_budgeted",
+        "global_plus_quadrants_budgeted"
+      ]
+    }
+  }
+}
