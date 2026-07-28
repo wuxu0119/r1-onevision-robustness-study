@@ -1,0 +1,28 @@
+{
+  "schema": "r1-onevision-audit-summary/v1",
+  "stage": "ifsr_stage_a_v2_5",
+  "decision": "NO-GO",
+  "efficacy_analysis_performed": false,
+  "expected_records": 10080,
+  "observed_records": 10080,
+  "unique_records": 10080,
+  "missing_records": 0,
+  "duplicate_records": 0,
+  "unexpected_records": 0,
+  "infrastructure_failures": 0,
+  "parseability": {
+    "multiple_choice": {
+      "denominator": 8064,
+      "rate": 0.8983134920634921
+    },
+    "free_response": {
+      "denominator": 2016,
+      "rate": 0.5962301587301587
+    }
+  },
+  "issue_counts": {
+    "answer_parseability_cell_below_threshold": 123,
+    "verbal_confidence_cell_below_threshold": 5
+  },
+  "permitted_interpretation": "engineering integrity only; no efficacy claims"
+}
