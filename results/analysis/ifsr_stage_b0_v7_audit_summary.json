@@ -1,0 +1,20 @@
+{
+  "schema": "r1-onevision-audit-summary/v1",
+  "stage": "ifsr_stage_b0_a2_v7_scorer_integrity",
+  "decision": "NO-GO",
+  "go": false,
+  "issue_counts": {
+    "canary_role_equivalence_failed": 46,
+    "canary_v7_aggregate_equivalence_failed": 5,
+    "canary_v7_aggregate_mismatch": 2,
+    "total": 53
+  },
+  "role_equivalence_failures_by_checkpoint": {
+    "base": 23,
+    "sft": 15,
+    "rl": 8
+  },
+  "launch_lock_issued": false,
+  "formal_efficacy_run_started": false,
+  "permitted_interpretation": "excluded-canary scorer requalification only; no model-efficacy result"
+}
