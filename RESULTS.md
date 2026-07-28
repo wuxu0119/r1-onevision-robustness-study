@@ -163,6 +163,14 @@ coverage, but accepts fewer than half of the items. This is best described as
 a promising training-free abstention heuristic, not as a fully validated
 failure detector.
 
+The paired item-bootstrap uplift over uniform same-count random acceptance is
++9.01 percentage points (95% CI [+4.98, +13.32]). It remains +7.63 points
+([+3.82, +11.67]) after matching accepted counts by answer type and +7.23
+points ([+3.40, +11.13]) after matching answer type and benchmark domain.
+The rejected subset has 68.08% error, 7.33 points ([+4.03, +10.92]) above the
+full held-out error rate. These are exploratory selection references, not
+independent competing detectors.
+
 ### Cross-checkpoint and perturbation check on the 300-item design subset
 
 These 15 groups are exploratory because they reuse the prompt-development
@@ -241,7 +249,26 @@ maximum recorded peak memory rises from 17.70 to 17.79 GB. No paired confidence
 interval excludes zero. Budgeting solves the engineering failure but does not
 produce evidence of an accuracy benefit.
 
-## 8. Interpretation boundaries
+## 8. Fail-closed reliability-signal requalification
+
+A later 10,080-call engineering pilot completed with all expected unique
+records and zero infrastructure failures, but failed the frozen signal-validity
+gates: 123/126 parseability cells and 5/6 verbal-confidence cells were below
+threshold. Multiple-choice parseability was 89.83%; free-response
+parseability was 59.62%. The authenticated decision was **NO-GO**, and no
+efficacy analysis was performed.
+
+A stricter Stage-B0 v7 excluded-canary audit then compared the compact option
+scorer with the full-sequence oracle. It returned **NO-GO** with 46 role-level
+equivalence failures (23 Base, 15 SFT, 8 RL), five aggregate-equivalence
+failures, and two aggregate winner mismatches. No launch lock was issued and
+no formal Stage-B0 efficacy run started.
+
+These are validity results rather than model-performance results. Full
+accounting and the future oracle-only workload are documented in
+[`RELIABILITY_AUDIT.md`](RELIABILITY_AUDIT.md).
+
+## 9. Interpretation boundaries
 
 - This is a reproducibility and measurement study, not a new training method.
 - Absolute scores depend on the local deterministic evaluator and are not
@@ -262,7 +289,7 @@ produce evidence of an accuracy benefit.
 - Nominal pixel matching in the multi-view study is an engineering proxy, not
   exact matching of hidden token count, FLOPs, or wall-clock cost.
 
-## 9. Machine-readable summaries
+## 10. Machine-readable summaries
 
 The repository tracks only compact aggregate files under
 `results/analysis/`, including:
@@ -273,6 +300,8 @@ The repository tracks only compact aggregate files under
 - `robustness_paired.csv`
 - `full_group_matrix.csv`
 - `scorer_repair_summary.json`
+- `ifsr_stage_a_audit_summary.json`
+- `ifsr_stage_b0_v7_audit_summary.json`
 - `extension/control_condition_summary.csv`
 - `extension/control_paired_contrasts.csv`
 - `extension/semantic_seed_aggregate.csv`
