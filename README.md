@@ -36,6 +36,8 @@ and benchmark images are not included.
    dual-prompt gate compare with same-prompt stochastic consistency?
 5. Does a near-pixel-budget-matched multi-view input improve accuracy without
    reintroducing the original out-of-memory failure?
+6. Do candidate reliability signals survive pre-specified validity and
+   scorer-equivalence gates?
 
 ## Experiment scope
 
@@ -120,10 +122,23 @@ five views; every paired 95% interval includes zero.
 Full tables, confidence intervals, paired flip counts, and interpretation
 boundaries are in [`RESULTS.md`](RESULTS.md).
 
+## Fail-closed reliability-signal requalification
+
+A later 10,080-call signal pilot completed without missing records or
+infrastructure failures but failed frozen parseability and confidence gates.
+A stricter scorer-integrity canary study then found 53 compact-versus-oracle
+equivalence issues and also returned **NO-GO**. No formal Stage-B0 efficacy run
+was launched. These negative audits are reported as validity evidence and are
+not used to claim model accuracy, calibration, or ranking improvements.
+
+See [`RELIABILITY_AUDIT.md`](RELIABILITY_AUDIT.md) and the machine-readable
+summaries under `results/analysis/`.
+
+
 ## Environment
 
-- Ubuntu 20.04.5
-- 8 × NVIDIA A100 PCIe 40 GB
+- Primary and extension phases: Ubuntu 20.04.5; up to 8 × NVIDIA A100 PCIe 40 GB
+- Qualification canaries: Ubuntu 22.04.5; 3 × NVIDIA A100 PCIe 80 GB
 - Python 3.11.15
 - PyTorch 2.6.0+cu124
 - Transformers 4.49.0
@@ -212,6 +227,9 @@ scored per-item outputs, logs, archives, and report documents are excluded.
 - Multiple-choice extraction is automated. Ambiguous and free-response outputs
   that cannot be scored conservatively remain marked for manual review rather
   than silently imputed.
+  Every non-runtime-error manual-review row remains in the accuracy denominator
+  and counts as incorrect; runtime-error rows are retained for audit but
+  excluded from accuracy and paired analyses.
 - Bootstrap intervals resample paired question IDs. Exact McNemar tests compare
   directional correctness flips; the 12 robustness tests use Holm correction.
 - The dual-prompt held-out split is held out only from prompt development, not
